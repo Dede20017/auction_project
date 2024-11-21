@@ -13,11 +13,19 @@ class IsAdminOrReadOnly(BasePermission):
 
 class IsParticipant(BasePermission):
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
+        # if not request.user.is_authenticated:
+        if not (request.user and request.user.is_authenticated):
             return False
-        print(request.user_id)
+        # print(request.user_id)
 
         lot_id = request.GET.get('id')
         if lot_id is None:
+            lot_id = request.data.get('lot_id')  # If passed in the body
+
+        if not lot_id:
             return False
-        return Participant.objects.filter(id=lot_id, user_id=request.user_id).exists()
+        # print(request.user.id)
+        print(Participant.objects.filter(lot_id=lot_id, user_id=request.user.id))
+        if Participant.objects.filter(lot_id=lot_id, user_id=request.user.id).exists():
+            return True
+

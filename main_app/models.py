@@ -66,9 +66,6 @@ class Bid(models.Model):
     total_price = models.PositiveIntegerField(null=True, blank=True)
     # date = models.DateTimeField()
 
-    def __str__(self):
-        return self.lot_id
-
 # class History(models.Model):
 #
 #     def __str__(self):

@@ -200,54 +200,54 @@ class ParticipantApiView(APIView):
 
 class BidApiView(APIView):
     permission_classes = [IsParticipant]
+    # permission_classes = [IsAuthenticated]
 
     def get(self,request): #data for show in BID page
-        lot_id = request.data.get('id')
-        if Lot.objects.get('status') != "open":
-            return Response(data={'message': 'Lot is not open'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
+        lot_id = request.GET.get('id')
+        if Lot.objects.filter(id=lot_id).exists():
             lot = Lot.objects.get(id=lot_id)
-            name = lot.name
-            description = lot.description
-            price = lot.price
-            step_value = lot.step_value
-            data = {
-                "lot_id": lot_id,
-                "name": name,
-                "description": description,
-                "price": price,
-                "step_value": step_value
-            }
-            return Response(data=data, status=status.HTTP_200_OK)
+            if lot.status != 'open':
+                return Response(data={'message': 'Lot is not open'}, status=status.HTTP_200_OK)
+            else:
+                user_id = request.user.id
+                participant = Participant.objects.get(lot_id=lot_id, user_id=user_id)
+                part_number = participant.number
+                price = lot.price
+                step_value = lot.step_value
 
-    def post(self, request):
-        user_id = request.user.id
-        lot_id = request.data.get('id')
-        if Lot.objects.get('status') != "open":
-            return Response(data={'message': 'Lot is not open'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            lot = Lot.objects.get(id=lot_id)
-            participants = Participant.objects.filter(id=lot_id)
-            for part in participants:
-                if part.user_id == user_id:
-                    number = part.number
-                    price = lot.price
-                    step_value = lot.step_value
-                    step_number = Bid.objects.filter(lot_id=lot_id).aggregate(Max('step_number'))['step_number__max'] or 0
-                    next_step = step_number + 1
-                    total = price + step_value * next_step
+                if Bid.objects.filter(lot_id=lot_id).exists():
+                    max_step_number = Bid.objects.filter(lot_id=lot_id).aggregate(Max('step_number'))['step_number__max']
+                    step_number = max_step_number + 1
+                    total_price = price + step_number * step_value
                     data = {
                         "lot_id": lot_id,
-                        "part_number": number,
-                        "step_number": next_step,
-                        "total_price": total
+                        "part_number": part_number,
+                        "step_number": step_number,
+                        "total_price": total_price
                     }
                     bid_serializer = BidSerializer(data=data)
                     if bid_serializer.is_valid():
                         bid_serializer.save()
                         return Response(data={'message': 'bid added'}, status=status.HTTP_200_OK)
+                        #заменить сообщение на data
                     else:
                         return Response(data=bid_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    return Response(data={'message': 'first of all you need to stay a perticipant'}, status=status.HTTP_400_BAD_REQUEST)
 
+                else:
+                    step_number = 1
+                    total_price = price + step_value
+                    data = {
+                        "lot_id": lot_id,
+                        "part_number": part_number,
+                        "step_number": step_number,
+                        "total_price": total_price
+                    }
+                    bid_serializer = BidSerializer(data=data)
+                    if bid_serializer.is_valid():
+                        bid_serializer.save()
+                        return Response(data={'message': 'bid added'}, status=status.HTTP_200_OK)
+                        # заменить сообщение на data
+                    else:
+                        return Response(data=bid_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(data={'message': 'Lot with this lot_id does not exist'}, status=status.HTTP_400_BAD_REQUEST)
