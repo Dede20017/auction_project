@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
@@ -220,35 +221,60 @@ class BidApiView(APIView):
                     max_step_number = Bid.objects.filter(lot_id=lot_id).aggregate(Max('step_number'))['step_number__max']
                     step_number = max_step_number + 1
                     total_price = price + step_number * step_value
-                    data = {
-                        "lot_id": lot_id,
-                        "part_number": part_number,
-                        "step_number": step_number,
-                        "total_price": total_price
-                    }
-                    bid_serializer = BidSerializer(data=data)
-                    if bid_serializer.is_valid():
-                        bid_serializer.save()
-                        return Response(data={'message': 'bid added'}, status=status.HTTP_200_OK)
-                        #заменить сообщение на data
-                    else:
-                        return Response(data=bid_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
                 else:
                     step_number = 1
                     total_price = price + step_value
-                    data = {
-                        "lot_id": lot_id,
-                        "part_number": part_number,
-                        "step_number": step_number,
-                        "total_price": total_price
-                    }
-                    bid_serializer = BidSerializer(data=data)
-                    if bid_serializer.is_valid():
-                        bid_serializer.save()
-                        return Response(data={'message': 'bid added'}, status=status.HTTP_200_OK)
-                        # заменить сообщение на data
-                    else:
-                        return Response(data=bid_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                data = {
+                    "lot_id": lot_id,
+                    "part_number": part_number,
+                    "step_number": step_number,
+                    "total_price": total_price
+                }
+                bid_serializer = BidSerializer(data=data)
+                if bid_serializer.is_valid():
+                    bid_serializer.save()
+                    return Response(data=data, status=status.HTTP_200_OK)
+                    # заменить сообщение на data
+                else:
+                    return Response(data=bid_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         else:
             return Response(data={'message': 'Lot with this lot_id does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
+class LotSearchApiView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        search = request.GET.get('search')
+        if Lot.objects.filter(name__contains=search).exists():
+            lot_by_name = Lot.objects.filter(name__contains=search)
+
+            lots = set()
+            lots = lots.union(lot_by_name)
+            paginator = PageNumberPagination()
+            paginator.page_size = 2
+            paginated_lots = paginator.paginate_queryset(lots, request)
+
+            data = LotSerializer(paginated_lots, many=True).data
+            return Response(data=data, status=status.HTTP_200_OK)
+        else:
+            return Response(data={'message': 'lot not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+class LotOrderApiView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        date = request.GET.get('date')
+        lots = Lot.objects.all()
+
+        if date is not None:
+            if date == 'desc':
+                lots = lots.order_by('-date')
+            elif date == 'asc':
+                lots = lots.order_by('date')
+        paginator = PageNumberPagination()
+        paginator.page_size = 2
+        paginated_lots = paginator.paginate_queryset(lots, request)
+        data = LotSerializer(paginated_lots, many=True).data
+        return Response(data=data, status=status.HTTP_200_OK)

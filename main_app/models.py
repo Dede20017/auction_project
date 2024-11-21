@@ -49,6 +49,7 @@ class Lot(models.Model):
         ('cancelled', 'cancelled'),
         ('blocked', 'blocked')
     ])
+    date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return self.number
@@ -57,14 +58,14 @@ class Participant(models.Model):
     number = models.PositiveSmallIntegerField() #нумерация отдельно, а не по id
     user_id = models.ForeignKey(AuctionUser, on_delete=models.CASCADE)
     lot_id = models.ForeignKey(Lot, on_delete=models.CASCADE)
-    # date = models.DateTimeField(null=True, blank=True)
+    # date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
 class Bid(models.Model):
     lot_id = models.ForeignKey(Lot, on_delete=models.CASCADE)
     part_number = models.ForeignKey(Participant, on_delete=models.CASCADE)
     step_number = models.PositiveSmallIntegerField()
     total_price = models.PositiveIntegerField(null=True, blank=True)
-    # date = models.DateTimeField()
+    # date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
 # class History(models.Model):
 #
