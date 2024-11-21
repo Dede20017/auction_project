@@ -243,7 +243,7 @@ class BidApiView(APIView):
             return Response(data={'message': 'Lot with this lot_id does not exist'}, status=status.HTTP_400_BAD_REQUEST)
 
 class LotSearchApiView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         search = request.GET.get('search')
@@ -252,17 +252,17 @@ class LotSearchApiView(APIView):
 
             lots = set()
             lots = lots.union(lot_by_name)
-            paginator = PageNumberPagination()
-            paginator.page_size = 2
-            paginated_lots = paginator.paginate_queryset(lots, request)
+            # paginator = PageNumberPagination()
+            # paginator.page_size = 2
+            # paginated_lots = paginator.paginate_queryset(lots, request)
 
-            data = LotSerializer(paginated_lots, many=True).data
+            data = LotSerializer(lots, many=True).data
             return Response(data=data, status=status.HTTP_200_OK)
         else:
             return Response(data={'message': 'lot not found'}, status=status.HTTP_400_BAD_REQUEST)
 
 class LotOrderApiView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         date = request.GET.get('date')
@@ -273,8 +273,8 @@ class LotOrderApiView(APIView):
                 lots = lots.order_by('-date')
             elif date == 'asc':
                 lots = lots.order_by('date')
-        paginator = PageNumberPagination()
-        paginator.page_size = 2
-        paginated_lots = paginator.paginate_queryset(lots, request)
-        data = LotSerializer(paginated_lots, many=True).data
+        # paginator = PageNumberPagination()
+        # paginator.page_size = 2
+        # paginated_lots = paginator.paginate_queryset(lots, request)
+        data = LotSerializer(lots, many=True).data
         return Response(data=data, status=status.HTTP_200_OK)
