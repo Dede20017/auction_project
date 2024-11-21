@@ -173,10 +173,11 @@ class ParticipantApiView(APIView):
 
 
     def post(self, request): #при нажатии JOIN
-        if Lot.objects.get('status') != "open":
+        lot_id = request.GET.get('id')
+        lot = Lot.objects.get(id=lot_id)
+        if lot.status != 'open':
             return Response(data={'message': 'Lot is not open'}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            lot_id = request.GET.get('id')
             user_id = request.user.id
 
             if lot_id is None:
