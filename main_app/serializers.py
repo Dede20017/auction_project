@@ -1,10 +1,11 @@
 from rest_framework.serializers import ModelSerializer
 from .models import *
+from rest_framework import serializers
 
 class UserSerializer(ModelSerializer):
     class Meta:
         model = AuctionUser
-        fields = ['name', 'surname', 'email']
+        fields = ['name', 'surname', 'email', 'data_joined']
 
 class AreaSerializer(ModelSerializer):
     class Meta:
@@ -27,3 +28,8 @@ class BidSerializer(ModelSerializer):
     class Meta:
         model = Bid
         fields = '__all__'
+
+class CurrencyRatesSerializer(serializers.Serializer):
+    base = serializers.CharField(max_length=3)
+    date = serializers.DateField()
+    rates = serializers.DictField(child=serializers.DecimalField(max_digits=10, decimal_places=4))

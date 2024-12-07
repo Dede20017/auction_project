@@ -16,6 +16,9 @@ from django.db.models import Max
 from .models import *
 from .serializers import *
 from .permissions import *
+# from .services.exchange import ExchangeService
+from geopy.geocoders import Nominatim
+import requests
 
 class RegistrationApiView(APIView):
     permission_classes = [AllowAny]
@@ -132,7 +135,7 @@ class LotApiView(APIView):
         lot = LotSerializer(data=request.data)
         if lot.is_valid():
             lot.save()
-            return Response(data={'message': 'area added'}, status=status.HTTP_200_OK)
+            return Response(data={'message': 'Lot added'}, status=status.HTTP_200_OK)
         else:
             return Response(data=lot.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -161,7 +164,7 @@ class LotApiView(APIView):
 class ParticipantApiView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):     #delete before deploy
+    def get(self, request):
         part_id = request.GET.get('id')
         if part_id is None:
             parts = Participant.objects.all()
@@ -174,7 +177,7 @@ class ParticipantApiView(APIView):
 
 
     def post(self, request): #при нажатии JOIN
-        lot_id = request.GET.get('id')
+        lot_id = request.GET.get('lot_id')
         lot = Lot.objects.get(id=lot_id)
         if lot.status != 'open':
             return Response(data={'message': 'Lot is not open'}, status=status.HTTP_400_BAD_REQUEST)
@@ -203,9 +206,20 @@ class ParticipantApiView(APIView):
 class BidApiView(APIView):
     permission_classes = [IsParticipant]
     # permission_classes = [IsAuthenticated]
+    def get(self, request):
+        lot_id = request.GET.get('lot_id')
+        if lot_id is None:
+            return Response(data={'message': 'lot_id is not exist'}, status=status.HTTP_200_OK)
+        else:
+            if lot_id.isnumeric():
+                bids = Bid.objects.filter(lot_id=lot_id)
+                data = BidSerializer(bids, many=True).data
+                return Response(data, status=status.HTTP_200_OK)
+            else:
+                return Response(data={'message': 'lot_id must be integer'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self,request): #data for show in BID page
-        lot_id = request.GET.get('id')
+    def post(self,request):
+        lot_id = request.GET.get('lot_id')
         if Lot.objects.filter(id=lot_id).exists():
             lot = Lot.objects.get(id=lot_id)
             if lot.status != 'open':
@@ -234,8 +248,8 @@ class BidApiView(APIView):
                 bid_serializer = BidSerializer(data=data)
                 if bid_serializer.is_valid():
                     bid_serializer.save()
-                    return Response(data=data, status=status.HTTP_200_OK)
-                    # заменить сообщение на data
+                    # return Response(data=bid_serializer.data['total_price'], status=status.HTTP_200_OK)
+                    return Response(data=bid_serializer.data, status=status.HTTP_200_OK)
                 else:
                     return Response(data=bid_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -250,13 +264,14 @@ class LotSearchApiView(APIView):
         if Lot.objects.filter(name__contains=search).exists():
             lot_by_name = Lot.objects.filter(name__contains=search)
 
-            lots = set()
-            lots = lots.union(lot_by_name)
+            # lots = set()
+            # lots = lots.union(lot_by_name)
+
             # paginator = PageNumberPagination()
             # paginator.page_size = 2
             # paginated_lots = paginator.paginate_queryset(lots, request)
 
-            data = LotSerializer(lots, many=True).data
+            data = LotSerializer(lot_by_name, many=True).data
             return Response(data=data, status=status.HTTP_200_OK)
         else:
             return Response(data={'message': 'lot not found'}, status=status.HTTP_400_BAD_REQUEST)
@@ -278,3 +293,49 @@ class LotOrderApiView(APIView):
         # paginated_lots = paginator.paginate_queryset(lots, request)
         data = LotSerializer(lots, many=True).data
         return Response(data=data, status=status.HTTP_200_OK)
+
+class CurrencyRatesView(APIView):
+    def get(self, request):
+        url = 'https://openexchangerates.org/api/latest.json?app_id=c771f4feaac24a66b93988ee93c507af'
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Failed to fetch data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# class GeoLocationView(APIView):
+#     def get(self, request):
+#         ip_address = self.get_client_ip(request)
+#         location = self.get_client_location(ip_address)
+#         print(ip_address)
+#         print(location)
+#         if location:
+#             data = {
+#                 'ip_address': ip_address,
+#                 'location': location
+#             }
+#             return Response(data=data, status=status.HTTP_200_OK)
+#         else:
+#             return Response(data={'error'}, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def get_client_ip(self, request):
+#         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+#         if x_forwarded_for:
+#             ip = x_forwarded_for.split(',')[0]
+#         else:
+#             ip = request.META.get('REMOTE_ADDR')
+#             return ip
+#
+#     def get_client_location(self, ip_address):
+#         geolocator = Nominatim(user_agent="geoapiExercises")
+#         print(geolocator)
+#         try:
+#             location = geolocator.geocode(ip_address)
+#             return {
+#                 'latitude': location.latitude,
+#                 'longitude': location.longitude,
+#                 'address': location.address
+#             }
+#         except Exception as e:
+#             return None

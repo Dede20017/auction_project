@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import User, AbstractBaseUser, PermissionsMixin
+from django.utils.timezone import now
 
 class AuctionUserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
@@ -21,7 +22,7 @@ class AuctionUser(AbstractBaseUser,PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     surname = models.CharField(max_length=255)
-    date_joined = models.DateTimeField(auto_now_add=True)
+    date_joined = models.DateTimeField(default=now)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -39,6 +40,7 @@ class Area(models.Model):
 class Lot(models.Model):
     number = models.CharField(max_length=255)
     name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='images', null=True, blank=True)
     description = models.TextField()
     area = models.ManyToManyField(Area, null=False)
     price = models.PositiveIntegerField()

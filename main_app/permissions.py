@@ -16,9 +16,8 @@ class IsParticipant(BasePermission):
         # if not request.user.is_authenticated:
         if not (request.user and request.user.is_authenticated):
             return False
-        # print(request.user_id)
 
-        lot_id = request.GET.get('id')
+        lot_id = request.GET.get('lot_id')
         if lot_id is None:
             lot_id = request.data.get('lot_id')  # If passed in the body
 
