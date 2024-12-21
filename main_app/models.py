@@ -42,7 +42,7 @@ class Lot(models.Model):
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='images', null=True, blank=True)
     description = models.TextField()
-    area = models.ManyToManyField(Area, null=False)
+    area = models.ManyToManyField(Area, blank=True)
     price = models.PositiveIntegerField()
     step_value = models.PositiveIntegerField()
     status = models.CharField(max_length=30, choices=[
@@ -67,9 +67,4 @@ class Bid(models.Model):
     part_number = models.ForeignKey(Participant, on_delete=models.CASCADE)
     step_number = models.PositiveSmallIntegerField()
     total_price = models.PositiveIntegerField(null=True, blank=True)
-    # date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
-# class History(models.Model):
-#
-#     def __str__(self):
-#         return self.lot_id

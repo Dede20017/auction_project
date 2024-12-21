@@ -5,7 +5,7 @@ from rest_framework import serializers
 class UserSerializer(ModelSerializer):
     class Meta:
         model = AuctionUser
-        fields = ['name', 'surname', 'email', 'data_joined']
+        fields = ['name', 'surname', 'email']
 
 class AreaSerializer(ModelSerializer):
     class Meta:
@@ -16,13 +16,16 @@ class LotSerializer(ModelSerializer):
     class Meta:
         model = Lot
         fields = '__all__'
-        # fields = ['number', 'name', 'area', 'price']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['area'] = AreaSerializer(instance.area.all(), many=True).data
+        return representation
 
 class ParticipantSerializer(ModelSerializer):
     class Meta:
         model = Participant
         fields = '__all__'
-        # read_only_fields = ['date']
 
 class BidSerializer(ModelSerializer):
     class Meta:

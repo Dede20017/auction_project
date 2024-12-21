@@ -74,7 +74,7 @@ class ProfileApiView(APIView):
         return Response(data={'message': 'user deleted'}, status=status.HTTP_200_OK)
 
 class AreaApiView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOrReadOnly]
 
     def get(self, request):
         area_id = request.GET.get('id')
@@ -145,7 +145,7 @@ class LotApiView(APIView):
             return Response(data={'message': 'you forget to add id'}, status=status.HTTP_400_BAD_REQUEST)
 
         lot = get_object_or_404(Lot, id=lot_id)
-        lot_serializer = AreaSerializer(lot, data=request.data, partial=True)
+        lot_serializer = LotSerializer(lot, data=request.data, partial=True)
         if lot_serializer.is_valid():
             lot_serializer.save()
             return Response(data={'message': 'lot patched'}, status=status.HTTP_200_OK)
@@ -194,7 +194,6 @@ class ParticipantApiView(APIView):
                 "number": next_number,
                 "user_id": user_id,
                 "lot_id": lot_id,
-                # "date": request.data.get('date')
             }
             part_serializer = ParticipantSerializer(data=data)
             if part_serializer.is_valid():
@@ -263,14 +262,6 @@ class LotSearchApiView(APIView):
         search = request.GET.get('search')
         if Lot.objects.filter(name__contains=search).exists():
             lot_by_name = Lot.objects.filter(name__contains=search)
-
-            # lots = set()
-            # lots = lots.union(lot_by_name)
-
-            # paginator = PageNumberPagination()
-            # paginator.page_size = 2
-            # paginated_lots = paginator.paginate_queryset(lots, request)
-
             data = LotSerializer(lot_by_name, many=True).data
             return Response(data=data, status=status.HTTP_200_OK)
         else:
@@ -288,10 +279,10 @@ class LotOrderApiView(APIView):
                 lots = lots.order_by('-date')
             elif date == 'asc':
                 lots = lots.order_by('date')
-        # paginator = PageNumberPagination()
-        # paginator.page_size = 2
-        # paginated_lots = paginator.paginate_queryset(lots, request)
-        data = LotSerializer(lots, many=True).data
+        paginator = PageNumberPagination()
+        paginator.page_size = 3
+        paginated_lots = paginator.paginate_queryset(lots, request)
+        data = LotSerializer(paginated_lots, many=True).data
         return Response(data=data, status=status.HTTP_200_OK)
 
 class CurrencyRatesView(APIView):
@@ -300,42 +291,8 @@ class CurrencyRatesView(APIView):
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            return Response(data, status=status.HTTP_200_OK)
+            eur_to_usd = data.get('rates', {}).get('EUR')
+            return Response({'EUR_to_USD': eur_to_usd}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Failed to fetch data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# class GeoLocationView(APIView):
-#     def get(self, request):
-#         ip_address = self.get_client_ip(request)
-#         location = self.get_client_location(ip_address)
-#         print(ip_address)
-#         print(location)
-#         if location:
-#             data = {
-#                 'ip_address': ip_address,
-#                 'location': location
-#             }
-#             return Response(data=data, status=status.HTTP_200_OK)
-#         else:
-#             return Response(data={'error'}, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def get_client_ip(self, request):
-#         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-#         if x_forwarded_for:
-#             ip = x_forwarded_for.split(',')[0]
-#         else:
-#             ip = request.META.get('REMOTE_ADDR')
-#             return ip
-#
-#     def get_client_location(self, ip_address):
-#         geolocator = Nominatim(user_agent="geoapiExercises")
-#         print(geolocator)
-#         try:
-#             location = geolocator.geocode(ip_address)
-#             return {
-#                 'latitude': location.latitude,
-#                 'longitude': location.longitude,
-#                 'address': location.address
-#             }
-#         except Exception as e:
-#             return None
